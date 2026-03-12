@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10+ Automation Dashboard</title>
+  <style>
+    :root {
+      --blue: #2d5aa0;
+      --blue-light: #4472c4;
+      --blue-dark: #1a3a6e;
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --cream: #fff3cc;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* -- Header -- */
+    header {
+      background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+      color: white;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+    header .subtitle { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+
+    /* -- Layout -- */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    /* -- Cards -- */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-body { padding: 20px; }
+
+    /* -- Tabs -- */
+    .tab-bar {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 16px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: -2px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--blue);
+      border-bottom-color: var(--blue);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* -- Form -- */
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-group { margin-bottom: 18px; }
+
+    /* -- Searchable Select -- */
+    .select-wrapper { position: relative; }
+    .select-search {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      background: white;
+    }
+    .select-search:focus { border-color: var(--blue); }
+    .select-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid var(--blue);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .select-dropdown.open { display: block; }
+    .select-option {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .select-option:hover, .select-option.highlighted {
+      background: #eff6ff;
+      color: var(--blue);
+    }
+    .select-option:last-child { border-bottom: none; }
+
+    /* -- Inputs -- */
+    input[type="date"],
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="date"]:focus,
+    input[type="text"]:focus,
+    input[type="password"]:focus { border-color: var(--blue); }
+
+    .date-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* -- Checkboxes -- */
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--blue);
+    }
+
+    /* -- Button -- */
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-primary {
+      background: var(--blue);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--blue-dark); }
+    .btn-primary:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    /* -- Status Badge -- */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-badge.running { background: #dbeafe; color: #1d4ed8; }
+    .status-badge.complete { background: #dcfce7; color: #166534; }
+    .status-badge.error { background: #fef2f2; color: #991b1b; }
+    .status-badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .status-badge.running .dot { background: #3b82f6; animation: pulse 1.5s infinite; }
+    .status-badge.complete .dot { background: #22c55e; }
+    .status-badge.error .dot { background: #ef4444; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* -- Log Area -- */
+    .log-area {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      padding: 16px;
+      border-radius: 8px;
+      max-height: 420px;
+      min-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .log-area .log-line { padding: 1px 0; }
+    .log-area .log-line .timestamp { color: #64748b; }
+    .log-area .log-line.error { color: #fca5a5; }
+    .log-area .log-line.success { color: #86efac; }
+    .log-area .empty-state {
+      color: #475569;
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    /* -- Results Card -- */
+    .results { display: none; margin-top: 16px; }
+    .results.visible { display: block; }
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .stat-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .stat-box .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--blue);
+    }
+    .stat-box .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    .stat-box.red .stat-value { color: var(--red); }
+    .stat-box.yellow .stat-value { color: var(--yellow); }
+    .stat-box.green .stat-value { color: var(--green); }
+
+    .sheet-link, .download-link {
+      display: block;
+      text-align: center;
+      padding: 12px;
+      background: #166534;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background 0.15s;
+    }
+    .sheet-link:hover, .download-link:hover { background: #14532d; }
+
+    /* -- ROI Summary Table -- */
+    .roi-summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .roi-summary-table th,
+    .roi-summary-table td {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      text-align: right;
+    }
+    .roi-summary-table th {
+      background: var(--blue);
+      color: white;
+      font-weight: 600;
+      text-align: center;
+      font-size: 12px;
+    }
+    .roi-summary-table td:first-child {
+      text-align: left;
+      font-weight: 600;
+    }
+    .roi-summary-table tr:nth-child(even) { background: #f8fafc; }
+    .roi-summary-table .delta-pos { color: #16a34a; }
+    .roi-summary-table .delta-neg { color: #dc2626; }
+    .roi-summary-table .hl-row { background: #eff6ff !important; font-weight: 700; }
+
+    .roi-links { display: flex; gap: 10px; margin-top: 12px; }
+    .roi-links a {
+      flex: 1;
+      display: block;
+      text-align: center;
+      padding: 10px;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      transition: opacity 0.15s;
+    }
+    .roi-links a:hover { opacity: 0.9; }
+    .roi-links .link-sheets { background: #166534; }
+    .roi-links .link-download { background: var(--blue); }
+
+    /* -- History -- */
+    .history-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-org { font-weight: 600; }
+    .history-dates { color: var(--text-muted); font-size: 12px; }
+    .history-type {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* -- MFA Modal -- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      width: 360px;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    .modal h3 {
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+    .modal p {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+    .modal input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 20px;
+      text-align: center;
+      letter-spacing: 8px;
+      font-weight: 700;
+      outline: none;
+      margin-bottom: 16px;
+    }
+    .modal input:focus { border-color: var(--blue); }
+    .modal .btn { margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>10+ Automation Dashboard</h1>
+    <div class="subtitle">AI Validation & ROI Report Pipeline</div>
+  </div>
+  <div id="globalStatus"></div>
+</header>
+
+<div class="container">
+
+  <!-- Left Panel: Controls -->
+  <div>
+    <div class="card">
+      <div class="card-body" style="padding-top: 12px;">
+
+        <!-- Tab Toggle -->
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="tenplus" onclick="switchTab('tenplus')">10+ Report</button>
+          <button class="tab-btn" data-tab="roi" onclick="switchTab('roi')">ROI Report</button>
+        </div>
+
+        <!-- 10+ Report Tab -->
+        <div id="tab-tenplus" class="tab-panel active">
+          <form id="runForm" onsubmit="return false;">
+            <div class="form-group">
+              <label for="orgSearch">Organization</label>
+              <div class="select-wrapper">
+                <input
+                  type="text"
+                  id="orgSearch"
+                  class="select-search"
+                  placeholder="Search orgs..."
+                  autocomplete="off"
+                >
+                <div id="orgDropdown" class="select-dropdown"></div>
+              </div>
+              <input type="hidden" id="orgValue">
+            </div>
+
+            <div class="form-group">
+              <div class="date-row">
+                <div>
+                  <label for="startDate">Start Date</label>
+                  <input type="date" id="startDate">
+                </div>
+                <div>
+                  <label for="endDate">End Date</label>
+                  <input type="date" id="endDate">
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" id="runBtn" class="btn btn-primary" onclick="startRun()">
+              Run Pipeline
+            </button>
+          </form>
+        </div>
+
+        <!-- ROI Report Tab -->
+        <div id="tab-roi" class="tab-panel">
+          <form id="roiForm" onsubmit="return false;">
+            <div class="form-group">
+              <label for="roiOrgSearch">Organization</label>
+              <div class="select-wrapper">
+                <input
+                  type="text"
+                  id="roiOrgSearch"
+                  class="select-search"
+                  placeholder="Search orgs..."
+                  autocomplete="off"
+                >
+                <div id="roiOrgDropdown" class="select-dropdown"></div>
+              </div>
+              <input type="hidden" id="roiOrgValue">
+            </div>
+
+            <div class="form-group">
+              <label for="stEmail">ServiceTitan Email</label>
+              <input type="text" id="stEmail" placeholder="user@company.com">
+            </div>
+
+            <div class="form-group">
+              <label for="stPassword">ServiceTitan Password</label>
+              <input type="password" id="stPassword" placeholder="Password">
+            </div>
+
+            <div class="form-group">
+              <label>Pre-ProBook Period</label>
+              <div class="date-row">
+                <div>
+                  <label for="preStart" style="font-size:11px; text-transform:none;">Start</label>
+                  <input type="date" id="preStart">
+                </div>
+                <div>
+                  <label for="preEnd" style="font-size:11px; text-transform:none;">End</label>
+                  <input type="date" id="preEnd">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Post-ProBook Period</label>
+              <div class="date-row">
+                <div>
+                  <label for="postStart" style="font-size:11px; text-transform:none;">Start</label>
+                  <input type="date" id="postStart">
+                </div>
+                <div>
+                  <label for="postEnd" style="font-size:11px; text-transform:none;">End</label>
+                  <input type="date" id="postEnd">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="goLiveDate">ProBook Go-Live Date</label>
+              <input type="date" id="goLiveDate">
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                Used to compute natural delta year (optional)
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Trades &amp; Business Units</label>
+              <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                Check trades to include. Enter BU names (comma-separated) for each trade's filter.
+              </div>
+              <div class="trade-bu-list">
+                <div class="trade-bu-row" style="margin-bottom: 8px;">
+                  <label style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                    <input type="checkbox" value="HVAC" checked class="trade-cb"> <strong>HVAC</strong>
+                  </label>
+                  <input type="text" class="trade-bu-input" data-trade="HVAC"
+                    placeholder="e.g. HVAC Service - Residential, HVAC Service - Commercial"
+                    style="width:100%; padding:6px 8px; font-size:12px; border:1px solid var(--border); border-radius:4px;">
+                </div>
+                <div class="trade-bu-row" style="margin-bottom: 8px;">
+                  <label style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                    <input type="checkbox" value="Plumbing" checked class="trade-cb"> <strong>Plumbing</strong>
+                  </label>
+                  <input type="text" class="trade-bu-input" data-trade="Plumbing"
+                    placeholder="e.g. Plumbing Service - Residential, Plumbing Service - Commercial"
+                    style="width:100%; padding:6px 8px; font-size:12px; border:1px solid var(--border); border-radius:4px;">
+                </div>
+                <div class="trade-bu-row" style="margin-bottom: 8px;">
+                  <label style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                    <input type="checkbox" value="Electrical" checked class="trade-cb"> <strong>Electrical</strong>
+                  </label>
+                  <input type="text" class="trade-bu-input" data-trade="Electrical"
+                    placeholder="e.g. Electrical Service - Residential, Electrical Service - Commercial"
+                    style="width:100%; padding:6px 8px; font-size:12px; border:1px solid var(--border); border-radius:4px;">
+                </div>
+                <div class="trade-bu-row" style="margin-bottom: 8px;">
+                  <label style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                    <input type="checkbox" value="Drains" checked class="trade-cb"> <strong>Drains</strong>
+                  </label>
+                  <input type="text" class="trade-bu-input" data-trade="Drains"
+                    placeholder="e.g. Drain Service - Residential"
+                    style="width:100%; padding:6px 8px; font-size:12px; border:1px solid var(--border); border-radius:4px;">
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" id="roiRunBtn" class="btn btn-primary" onclick="startROIRun()">
+              Run ROI Pipeline
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 10+ Results -->
+    <div id="resultsCard" class="card results" style="margin-top: 16px;">
+      <div class="card-header">Results</div>
+      <div class="card-body">
+        <div class="results-grid">
+          <div class="stat-box">
+            <div class="stat-value" id="statTotal">-</div>
+            <div class="stat-label">Total Jobs</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="statRelevant">-</div>
+            <div class="stat-label">With 10+ Tag</div>
+          </div>
+          <div class="stat-box red">
+            <div class="stat-value" id="statMissed">-</div>
+            <div class="stat-label">AI Missed</div>
+          </div>
+          <div class="stat-box yellow">
+            <div class="stat-value" id="statAdded">-</div>
+            <div class="stat-label">AI Added</div>
+          </div>
+          <div class="stat-box green">
+            <div class="stat-value" id="statMatch">-</div>
+            <div class="stat-label">Match</div>
+          </div>
+        </div>
+        <a id="sheetLink" href="#" target="_blank" class="sheet-link">
+          Open Google Sheet
+        </a>
+      </div>
+    </div>
+
+    <!-- ROI Results -->
+    <div id="roiResultsCard" class="card results" style="margin-top: 16px;">
+      <div class="card-header">ROI Results</div>
+      <div class="card-body">
+        <div id="roiSummaryTable"></div>
+        <div class="roi-links">
+          <a id="roiSheetsLink" href="#" target="_blank" class="link-sheets" style="display:none;">
+            Open in Google Sheets
+          </a>
+          <a id="roiDownloadLink" href="#" class="link-download">
+            Download Excel
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Run History -->
+    <div class="card" style="margin-top: 16px;">
+      <div class="card-header">Recent Runs</div>
+      <div class="card-body" id="historyList" style="max-height: 200px; overflow-y: auto;">
+        <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">
+          No runs yet
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Live Log -->
+  <div>
+    <div class="card" style="height: 100%;">
+      <div class="card-header">
+        Live Output
+        <span id="logStatus"></span>
+      </div>
+      <div class="card-body">
+        <div id="logArea" class="log-area">
+          <div class="empty-state">Select an org and date range, then click Run Pipeline</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MFA Modal -->
+<div id="mfaModal" class="modal-overlay">
+  <div class="modal">
+    <h3>MFA Verification Required</h3>
+    <p>Enter the 6-digit code sent to your device or check the #mfa Slack channel.</p>
+    <input type="text" id="mfaCodeInput" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+    <button class="btn btn-primary" onclick="submitMFA()">Submit Code</button>
+  </div>
+</div>
+
+<script>
+  // -- State --
+  let orgs = [];
+  let currentRunId = null;
+  let currentPipeline = 'tenplus'; // or 'roi'
+  let selectedOrg = '';
+  let highlightIndex = -1;
+  let roiSelectedOrg = '';
+  let roiHighlightIndex = -1;
+
+  // -- Load orgs on startup --
+  fetch('/api/orgs')
+    .then(r => r.json())
+    .then(data => {
+      orgs = data;
+      renderDropdown(orgs, 'orgDropdown');
+      renderDropdown(orgs, 'roiOrgDropdown');
+    });
+
+  // -- Tab switching --
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
+    currentPipeline = tab;
+  }
+
+  // -- Searchable dropdown (shared logic) --
+  function renderDropdown(items, dropdownId) {
+    const dd = document.getElementById(dropdownId);
+    const isRoi = dropdownId === 'roiOrgDropdown';
+    dd.innerHTML = items
+      .map((o, i) => `<div class="select-option" data-value="${o}" data-index="${i}" onclick="${isRoi ? 'selectRoiOrg' : 'selectOrg'}('${o.replace(/'/g, "\\'")}')">${o}</div>`)
+      .join('');
+    if (isRoi) roiHighlightIndex = -1;
+    else highlightIndex = -1;
+  }
+
+  // 10+ org dropdown
+  const orgSearch = document.getElementById('orgSearch');
+  const orgDropdown = document.getElementById('orgDropdown');
+  const orgValue = document.getElementById('orgValue');
+
+  orgSearch.addEventListener('focus', () => {
+    renderDropdown(filterOrgs(orgSearch.value), 'orgDropdown');
+    orgDropdown.classList.add('open');
+  });
+  orgSearch.addEventListener('input', () => {
+    renderDropdown(filterOrgs(orgSearch.value), 'orgDropdown');
+    orgDropdown.classList.add('open');
+  });
+  orgSearch.addEventListener('keydown', (e) => {
+    const items = orgDropdown.querySelectorAll('.select-option');
+    if (e.key === 'ArrowDown') { e.preventDefault(); highlightIndex = Math.min(highlightIndex + 1, items.length - 1); updateHighlight(items, highlightIndex); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); highlightIndex = Math.max(highlightIndex - 1, 0); updateHighlight(items, highlightIndex); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (highlightIndex >= 0 && items[highlightIndex]) selectOrg(items[highlightIndex].dataset.value); }
+    else if (e.key === 'Escape') { orgDropdown.classList.remove('open'); }
+  });
+
+  function selectOrg(name) {
+    selectedOrg = name;
+    orgSearch.value = name;
+    orgValue.value = name;
+    orgDropdown.classList.remove('open');
+  }
+
+  // ROI org dropdown
+  const roiOrgSearch = document.getElementById('roiOrgSearch');
+  const roiOrgDropdown = document.getElementById('roiOrgDropdown');
+  const roiOrgValue = document.getElementById('roiOrgValue');
+
+  roiOrgSearch.addEventListener('focus', () => {
+    renderDropdown(filterOrgs(roiOrgSearch.value), 'roiOrgDropdown');
+    roiOrgDropdown.classList.add('open');
+  });
+  roiOrgSearch.addEventListener('input', () => {
+    renderDropdown(filterOrgs(roiOrgSearch.value), 'roiOrgDropdown');
+    roiOrgDropdown.classList.add('open');
+  });
+  roiOrgSearch.addEventListener('keydown', (e) => {
+    const items = roiOrgDropdown.querySelectorAll('.select-option');
+    if (e.key === 'ArrowDown') { e.preventDefault(); roiHighlightIndex = Math.min(roiHighlightIndex + 1, items.length - 1); updateHighlight(items, roiHighlightIndex); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); roiHighlightIndex = Math.max(roiHighlightIndex - 1, 0); updateHighlight(items, roiHighlightIndex); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (roiHighlightIndex >= 0 && items[roiHighlightIndex]) selectRoiOrg(items[roiHighlightIndex].dataset.value); }
+    else if (e.key === 'Escape') { roiOrgDropdown.classList.remove('open'); }
+  });
+
+  function selectRoiOrg(name) {
+    roiSelectedOrg = name;
+    roiOrgSearch.value = name;
+    roiOrgValue.value = name;
+    roiOrgDropdown.classList.remove('open');
+  }
+
+  // Close dropdowns on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.select-wrapper')) {
+      orgDropdown.classList.remove('open');
+      roiOrgDropdown.classList.remove('open');
+    }
+  });
+
+  function updateHighlight(items, idx) {
+    items.forEach((el, i) => el.classList.toggle('highlighted', i === idx));
+    if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+  }
+
+  function filterOrgs(query) {
+    if (!query) return orgs;
+    const q = query.toLowerCase();
+    return orgs.filter(o => o.toLowerCase().includes(q));
+  }
+
+  // -- Run 10+ Pipeline --
+  async function startRun() {
+    const org = orgValue.value || orgSearch.value;
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    if (!org) { alert('Please select an organization'); return; }
+    if (!startDate || !endDate) { alert('Please select start and end dates'); return; }
+    if (!orgs.includes(org)) { alert('Please select a valid organization from the list'); return; }
+
+    const runBtn = document.getElementById('runBtn');
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running...';
+
+    document.getElementById('resultsCard').classList.remove('visible');
+    document.getElementById('roiResultsCard').classList.remove('visible');
+    clearLog();
+    addLogLine('Starting 10+ pipeline...', 'success');
+    setGlobalStatus('running', 'Running');
+
+    try {
+      const res = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ org, start_date: startDate, end_date: endDate }),
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        addLogLine('ERROR: ' + data.error, 'error');
+        runBtn.disabled = false;
+        runBtn.textContent = 'Run Pipeline';
+        setGlobalStatus('error', 'Error');
+        return;
+      }
+
+      currentRunId = data.run_id;
+      currentPipeline = 'tenplus';
+      listenToEvents(data.run_id);
+
+    } catch (err) {
+      addLogLine('ERROR: ' + err.message, 'error');
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run Pipeline';
+      setGlobalStatus('error', 'Error');
+    }
+  }
+
+  // -- Run ROI Pipeline --
+  async function startROIRun() {
+    const org = roiOrgValue.value || roiOrgSearch.value;
+    const stEmail = document.getElementById('stEmail').value;
+    const stPassword = document.getElementById('stPassword').value;
+    const preStart = document.getElementById('preStart').value;
+    const preEnd = document.getElementById('preEnd').value;
+    const postStart = document.getElementById('postStart').value;
+    const postEnd = document.getElementById('postEnd').value;
+    const goLiveDate = document.getElementById('goLiveDate').value;
+
+    if (!org) { alert('Please select an organization'); return; }
+    if (!stEmail || !stPassword) { alert('Please enter ServiceTitan credentials'); return; }
+    if (!preStart || !preEnd || !postStart || !postEnd) { alert('Please fill all date fields'); return; }
+
+    // Gather selected trades and their BU filters
+    const trades = [];
+    const business_units = {};
+    document.querySelectorAll('.trade-cb:checked').forEach(cb => {
+      const trade = cb.value;
+      trades.push(trade);
+      // Find the BU input for this trade
+      const buInput = document.querySelector(`.trade-bu-input[data-trade="${trade}"]`);
+      if (buInput && buInput.value.trim()) {
+        business_units[trade] = buInput.value.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    });
+    if (trades.length === 0) { alert('Please select at least one trade'); return; }
+
+    const roiRunBtn = document.getElementById('roiRunBtn');
+    roiRunBtn.disabled = true;
+    roiRunBtn.textContent = 'Running...';
+
+    document.getElementById('resultsCard').classList.remove('visible');
+    document.getElementById('roiResultsCard').classList.remove('visible');
+    clearLog();
+    addLogLine('Starting ROI pipeline...', 'success');
+    setGlobalStatus('running', 'Running');
+
+    try {
+      const res = await fetch('/api/roi/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org,
+          st_username: stEmail,
+          st_password: stPassword,
+          pre_start: preStart,
+          pre_end: preEnd,
+          post_start: postStart,
+          post_end: postEnd,
+          go_live_date: goLiveDate,
+          trades,
+          business_units,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        addLogLine('ERROR: ' + data.error, 'error');
+        roiRunBtn.disabled = false;
+        roiRunBtn.textContent = 'Run ROI Pipeline';
+        setGlobalStatus('error', 'Error');
+        return;
+      }
+
+      currentRunId = data.run_id;
+      currentPipeline = 'roi';
+      listenToEvents(data.run_id);
+
+    } catch (err) {
+      addLogLine('ERROR: ' + err.message, 'error');
+      roiRunBtn.disabled = false;
+      roiRunBtn.textContent = 'Run ROI Pipeline';
+      setGlobalStatus('error', 'Error');
+    }
+  }
+
+  // -- SSE Listener --
+  function listenToEvents(runId) {
+    const evtSource = new EventSource(`/api/run/${runId}/events`);
+
+    evtSource.onmessage = (e) => {
+      const event = JSON.parse(e.data);
+
+      if (event.type === 'log') {
+        const isError = event.message.toLowerCase().includes('error') || event.message.toLowerCase().includes('warning');
+        const isSuccess = event.message.toLowerCase().includes('complete') || event.message.toLowerCase().includes('saved');
+        addLogLine(event.message, isError ? 'error' : isSuccess ? 'success' : '');
+      }
+
+      if (event.type === 'mfa_needed') {
+        showMFAModal(runId);
+      }
+
+      if (event.type === 'status') {
+        if (event.status === 'complete' && event.result) {
+          if (currentPipeline === 'roi') {
+            showROIResults(event.result);
+          } else {
+            showResults(event.result);
+          }
+          setGlobalStatus('complete', 'Complete');
+          resetButtons();
+          refreshHistory();
+        } else if (event.status === 'error') {
+          setGlobalStatus('error', 'Error');
+          resetButtons();
+          refreshHistory();
+        }
+      }
+
+      if (event.type === 'done') {
+        evtSource.close();
+      }
+    };
+
+    evtSource.onerror = () => {
+      evtSource.close();
+      resetButtons();
+    };
+  }
+
+  // -- MFA Modal --
+  function showMFAModal(runId) {
+    document.getElementById('mfaModal').classList.add('open');
+    const input = document.getElementById('mfaCodeInput');
+    input.value = '';
+    input.focus();
+    input.dataset.runId = runId;
+  }
+
+  async function submitMFA() {
+    const input = document.getElementById('mfaCodeInput');
+    const code = input.value.trim();
+    const runId = input.dataset.runId;
+
+    if (!code || code.length !== 6) {
+      alert('Please enter a 6-digit code');
+      return;
+    }
+
+    try {
+      await fetch(`/api/roi/mfa/${runId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      document.getElementById('mfaModal').classList.remove('open');
+      addLogLine('MFA code submitted.', 'success');
+    } catch (err) {
+      addLogLine('Failed to submit MFA: ' + err.message, 'error');
+    }
+  }
+
+  // Allow Enter key in MFA input
+  document.getElementById('mfaCodeInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitMFA();
+  });
+
+  // -- Log --
+  function clearLog() {
+    document.getElementById('logArea').innerHTML = '';
+  }
+
+  function addLogLine(msg, type = '') {
+    const logArea = document.getElementById('logArea');
+    const line = document.createElement('div');
+    line.className = 'log-line' + (type ? ' ' + type : '');
+    line.textContent = msg;
+    logArea.appendChild(line);
+    logArea.scrollTop = logArea.scrollHeight;
+  }
+
+  // -- Results --
+  function showResults(result) {
+    document.getElementById('statTotal').textContent = result.total_jobs;
+    document.getElementById('statRelevant').textContent = result.relevant_jobs;
+    document.getElementById('statMissed').textContent = result.missed;
+    document.getElementById('statAdded').textContent = result.added;
+    document.getElementById('statMatch').textContent = result.matched;
+    document.getElementById('sheetLink').href = result.sheet_url;
+    document.getElementById('resultsCard').classList.add('visible');
+  }
+
+  function showROIResults(result) {
+    // Build summary table
+    const trades = result.trades || [];
+    const ts = result.trade_summary || {};
+    const hlPre = result.high_level_pre || {};
+    const hlPost = result.high_level_post || {};
+
+    function fmt(v) {
+      if (v === undefined || v === null) return '-';
+      if (typeof v === 'number') {
+        if (v >= 1000) return '$' + v.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+        return v.toLocaleString();
+      }
+      return v;
+    }
+    function fmtDelta(pre, post) {
+      if (!pre || !post) return '';
+      const d = post - pre;
+      const pct = pre !== 0 ? ((d / pre) * 100).toFixed(1) : '—';
+      const cls = d >= 0 ? 'delta-pos' : 'delta-neg';
+      const sign = d >= 0 ? '+' : '';
+      return `<span class="${cls}">${sign}${pct}%</span>`;
+    }
+
+    let html = `<table class="roi-summary-table">
+      <tr><th>Trade</th><th>Metric</th><th>Pre-PB</th><th>Post-PB</th><th>Delta</th></tr>`;
+
+    const metrics = [
+      ['total_sales', 'Total Sales'],
+      ['completed_jobs', 'Completed Jobs'],
+      ['opportunities', 'Opportunities'],
+      ['converted_jobs', 'Converted Jobs'],
+    ];
+
+    for (const trade of trades) {
+      const td = ts[trade];
+      if (!td) continue;
+      for (let i = 0; i < metrics.length; i++) {
+        const [key, label] = metrics[i];
+        const pre = td.pre[key] || 0;
+        const post = td.post[key] || 0;
+        html += `<tr>
+          ${i === 0 ? `<td rowspan="${metrics.length}"><strong>${trade}</strong></td>` : ''}
+          <td style="text-align:left">${label}</td>
+          <td>${fmt(pre)}</td>
+          <td>${fmt(post)}</td>
+          <td>${fmtDelta(pre, post)}</td>
+        </tr>`;
+      }
+    }
+
+    // High level row
+    for (let i = 0; i < metrics.length; i++) {
+      const [key, label] = metrics[i];
+      const pre = hlPre[key] || 0;
+      const post = hlPost[key] || 0;
+      html += `<tr class="hl-row">
+        ${i === 0 ? `<td rowspan="${metrics.length}">All Trades</td>` : ''}
+        <td style="text-align:left">${label}</td>
+        <td>${fmt(pre)}</td>
+        <td>${fmt(post)}</td>
+        <td>${fmtDelta(pre, post)}</td>
+      </tr>`;
+    }
+
+    html += '</table>';
+    document.getElementById('roiSummaryTable').innerHTML = html;
+
+    // Links
+    const dlLink = document.getElementById('roiDownloadLink');
+    if (result.excel_path) {
+      const filename = result.excel_path.split('/').pop();
+      dlLink.href = `/api/download/${encodeURIComponent(filename)}`;
+    }
+
+    const sheetsLink = document.getElementById('roiSheetsLink');
+    if (result.google_url) {
+      sheetsLink.href = result.google_url;
+      sheetsLink.style.display = 'block';
+    } else {
+      sheetsLink.style.display = 'none';
+    }
+
+    document.getElementById('roiResultsCard').classList.add('visible');
+  }
+
+  // -- Status Badge --
+  function setGlobalStatus(status, label) {
+    const el = document.getElementById('globalStatus');
+    el.innerHTML = `<span class="status-badge ${status}"><span class="dot"></span>${label}</span>`;
+  }
+
+  function resetButtons() {
+    const btn10 = document.getElementById('runBtn');
+    btn10.disabled = false;
+    btn10.textContent = 'Run Pipeline';
+
+    const btnRoi = document.getElementById('roiRunBtn');
+    btnRoi.disabled = false;
+    btnRoi.textContent = 'Run ROI Pipeline';
+  }
+
+  // -- History --
+  async function refreshHistory() {
+    try {
+      const res = await fetch('/api/runs');
+      const runs = await res.json();
+      const el = document.getElementById('historyList');
+
+      if (runs.length === 0) return;
+
+      el.innerHTML = runs.map(r => `
+        <div class="history-item">
+          <div>
+            <div class="history-org">${r.org}</div>
+            <div class="history-dates">${r.start_date} to ${r.end_date}</div>
+            <div class="history-type">${r.pipeline_type === 'roi' ? 'ROI' : '10+'}</div>
+          </div>
+          <span class="status-badge ${r.status}">
+            <span class="dot"></span>${r.status}
+          </span>
+        </div>
+      `).join('');
+    } catch (e) {}
+  }
+
+  // Load history on startup
+  refreshHistory();
+</script>
+
+</body>
+</html>

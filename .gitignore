@@ -1,13 +1,25 @@
+# Secrets
 .env
+google_token.json
+google_credentials.json
+
+# Python
 venv/
 __pycache__/
 *.pyc
+
+# Output data (generated reports & scrape artifacts)
 qa_screenshots/
-google_token.json
-google_credentials.json
-*.json
-!package.json
-*.xlsx
-*.html
-*.png
-*.pyc
+*_raw_data_*.json
+*_Report_*.xlsx
+*_10Plus_Report_*.xlsx
+recapture_all_records_*.json
+
+# Debug screenshots & HTML dumps
+flow_step*.png
+flow_step*.html
+inspect_*.png
+inspect_*.html
+inspect_*.json
+test_*.png
+job_card_*.html
