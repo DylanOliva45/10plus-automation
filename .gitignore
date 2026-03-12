@@ -1,0 +1,13 @@
+.env
+venv/
+__pycache__/
+*.pyc
+qa_screenshots/
+google_token.json
+google_credentials.json
+*.json
+!package.json
+*.xlsx
+*.html
+*.png
+*.pyc
