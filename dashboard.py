@@ -191,12 +191,13 @@ ORGS = [
 class PipelineRun:
     """Wraps a single pipeline execution with event streaming."""
 
-    def __init__(self, org: str, start_date: str, end_date: str, comparison_side: str = "dispatcher"):
+    def __init__(self, org: str, start_date: str, end_date: str, comparison_side: str = "dispatcher", max_trace_jobs: int = 0):
         self.id = uuid.uuid4().hex[:8]
         self.org = org
         self.start_date = start_date
         self.end_date = end_date
         self.comparison_side = comparison_side
+        self.max_trace_jobs = max_trace_jobs
         self.status = "pending"
         self.pipeline_type = "10plus"
         self.events: Queue = Queue()
@@ -257,8 +258,8 @@ class PipelineRun:
             jobs = scraper.scrape_all_jobs()
 
             # Phase 6: Trace enrichment
-            self._log("Enriching jobs with LangSmith trace reasons...")
-            scraper.enrich_jobs_with_trace_reasons(max_jobs=0)
+            self._log(f"Enriching jobs with LangSmith trace reasons (max={self.max_trace_jobs or 'all'})...")
+            scraper.enrich_jobs_with_trace_reasons(max_jobs=self.max_trace_jobs)
 
             # JSON backup
             json_path = scraper.save_json_backup(output_dir=str(output_dir))
@@ -328,12 +329,13 @@ class ScrapeOnlyRun:
     manually and the results are available on the Jobs/Diffs page.
     """
 
-    def __init__(self, org: str, comparison_side: str = "dispatcher"):
+    def __init__(self, org: str, comparison_side: str = "dispatcher", max_trace_jobs: int = 0):
         self.id = uuid.uuid4().hex[:8]
         self.org = org
         self.start_date = ""
         self.end_date = ""
         self.comparison_side = comparison_side
+        self.max_trace_jobs = max_trace_jobs
         self.status = "pending"
         self.pipeline_type = "10plus"
         self.events: Queue = Queue()
@@ -455,8 +457,8 @@ class ScrapeOnlyRun:
             jobs = scraper.scrape_all_jobs()
 
             # Trace enrichment
-            self._log("Enriching jobs with LangSmith trace reasons...")
-            scraper.enrich_jobs_with_trace_reasons(max_jobs=0)
+            self._log(f"Enriching jobs with LangSmith trace reasons (max={self.max_trace_jobs or 'all'})...")
+            scraper.enrich_jobs_with_trace_reasons(max_jobs=self.max_trace_jobs)
 
             # JSON backup
             json_path = scraper.save_json_backup(output_dir=str(output_dir))
@@ -846,6 +848,7 @@ async def start_run(request: Request):
     start_date = data.get("start_date", "").strip()
     end_date = data.get("end_date", "").strip()
     comparison_side = data.get("comparison_side", "dispatcher").strip()
+    max_trace_jobs = int(data.get("max_trace_jobs", 0))
 
     if not org or not start_date or not end_date:
         return JSONResponse({"error": "org, start_date, and end_date are required"}, status_code=400)
@@ -853,7 +856,7 @@ async def start_run(request: Request):
     if org not in ORGS:
         return JSONResponse({"error": f"Unknown org: {org}"}, status_code=400)
 
-    run = PipelineRun(org, start_date, end_date, comparison_side=comparison_side)
+    run = PipelineRun(org, start_date, end_date, comparison_side=comparison_side, max_trace_jobs=max_trace_jobs)
     runs[run.id] = run
 
     thread = threading.Thread(target=run.run, daemon=True)

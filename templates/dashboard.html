@@ -487,6 +487,18 @@
               </select>
             </div>
 
+            <div class="form-group">
+              <label for="maxTraceJobs">Max Trace Enrichment Jobs</label>
+              <select id="maxTraceJobs" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:white;">
+                <option value="0" selected>All</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+
             <button type="submit" id="runBtn" class="btn btn-primary" onclick="startRun()">
               Run Pipeline
             </button>
@@ -833,7 +845,7 @@
       const res = await fetch('/api/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ org, start_date: startDate, end_date: endDate, comparison_side: document.getElementById('comparisonSide').value }),
+        body: JSON.stringify({ org, start_date: startDate, end_date: endDate, comparison_side: document.getElementById('comparisonSide').value, max_trace_jobs: parseInt(document.getElementById('maxTraceJobs').value) }),
       });
       const data = await res.json();
 
