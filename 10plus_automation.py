@@ -174,6 +174,9 @@ def main() -> None:
         scraper.scroll_and_load_all_jobs()
         jobs = scraper.scrape_all_jobs()
 
+        # Phase 6: Enrich mismatched jobs with LangSmith trace reasons
+        scraper.enrich_jobs_with_trace_reasons()
+
         # Save JSON backup
         json_path = scraper.save_json_backup(output_dir=str(output_dir))
         print(f"JSON backup: {json_path}")

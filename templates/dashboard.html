@@ -479,6 +479,14 @@
               </div>
             </div>
 
+            <div class="form-group">
+              <label for="comparisonSide">Compare Against</label>
+              <select id="comparisonSide" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:white;">
+                <option value="dispatcher" selected>Dispatcher Data</option>
+                <option value="csr">CSR Data</option>
+              </select>
+            </div>
+
             <button type="submit" id="runBtn" class="btn btn-primary" onclick="startRun()">
               Run Pipeline
             </button>
@@ -614,11 +622,15 @@
           </div>
           <div class="stat-box red">
             <div class="stat-value" id="statMissed">-</div>
-            <div class="stat-label">AI Missed</div>
+            <div class="stat-label">Disp Missed</div>
           </div>
           <div class="stat-box yellow">
             <div class="stat-value" id="statAdded">-</div>
-            <div class="stat-label">AI Added</div>
+            <div class="stat-label">Probook Added</div>
+          </div>
+          <div class="stat-box" style="border-left: 3px solid #4472c4;">
+            <div class="stat-value" id="statJobTypeMM">-</div>
+            <div class="stat-label">Job Type MM</div>
           </div>
           <div class="stat-box green">
             <div class="stat-value" id="statMatch">-</div>
@@ -821,7 +833,7 @@
       const res = await fetch('/api/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ org, start_date: startDate, end_date: endDate }),
+        body: JSON.stringify({ org, start_date: startDate, end_date: endDate, comparison_side: document.getElementById('comparisonSide').value }),
       });
       const data = await res.json();
 
@@ -1025,6 +1037,7 @@
     document.getElementById('statRelevant').textContent = result.relevant_jobs;
     document.getElementById('statMissed').textContent = result.missed;
     document.getElementById('statAdded').textContent = result.added;
+    document.getElementById('statJobTypeMM').textContent = result.job_type_mismatch || 0;
     document.getElementById('statMatch').textContent = result.matched;
     document.getElementById('sheetLink').href = result.sheet_url;
     document.getElementById('resultsCard').classList.add('visible');

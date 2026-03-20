@@ -48,25 +48,43 @@ class JobRecord:
     ai_has_10plus: bool = False
     disp_has_10plus: bool = False
     unknown_age: bool = False
-    ten_plus_status: str = ""
+    category: str = ""
+    ten_plus_status: str = ""  # kept for backward compat — mirrors category
     notes: str = ""
+    hvac_system_age_reason: str = ""
+
+    @staticmethod
+    def _ten_plus_tags(tags: list[str]) -> list[str]:
+        return sorted(t for t in tags if "10+" in t)
 
     def compute_derived_fields(self) -> None:
         self.ai_has_10plus = any("10+" in tag for tag in self.ai_prediction.tags)
         self.disp_has_10plus = any("10+" in tag for tag in self.dispatcher_verified.tags)
         self.unknown_age = "Unknown Age" in self.ai_prediction.tags or "Unknown Age" in self.dispatcher_verified.tags
 
+        ai_10plus_tags = self._ten_plus_tags(self.ai_prediction.tags)
+        disp_10plus_tags = self._ten_plus_tags(self.dispatcher_verified.tags)
+
         if self.ai_has_10plus and self.disp_has_10plus:
-            self.ten_plus_status = "Match"
-        elif self.disp_has_10plus and not self.ai_has_10plus:
-            self.ten_plus_status = "AI Missed 10+"
+            if self.ai_prediction.job_type != self.dispatcher_verified.job_type:
+                self.category = "10+ Job Type Mismatch"
+            elif ai_10plus_tags != disp_10plus_tags:
+                self.category = "10+ Tag Mismatch"
+            elif self.ai_prediction.priority != self.dispatcher_verified.priority:
+                self.category = "10+ Priority Mismatch"
+            else:
+                self.category = "Match"
         elif self.ai_has_10plus and not self.disp_has_10plus:
-            self.ten_plus_status = "AI Added 10+"
+            self.category = "Probook placed 10+ tag that CSR/Dispatch Missed"
+        elif self.disp_has_10plus and not self.ai_has_10plus:
+            self.category = "Dispatcher placed 10+ tag that Probook Missed"
         else:
-            self.ten_plus_status = ""
+            self.category = ""
+
+        self.ten_plus_status = self.category
 
         # Auto-note for unknown age cases
-        if self.unknown_age and self.ten_plus_status == "AI Added 10+":
+        if self.unknown_age and self.category == "Probook placed 10+ tag that CSR/Dispatch Missed":
             self.notes = "Unknown Age — AI tagged 10+ but age data unavailable"
 
 
@@ -282,7 +300,8 @@ class ProBookScraper:
         self._wait_for_react_idle()
 
         # Left sidebar tab: "AI Validation" (MUI Joy Tab with role="tab")
-        self.page.get_by_role("tab", name="AI Validation").click()
+        # Use exact=True to avoid matching "AI Validation Discovery" / "AI Validation Metrics"
+        self.page.get_by_role("tab", name="AI Validation", exact=True).click()
         self._wait_for_react_idle()
 
         # Content sub-tab: "Dataset Builder" (data-slot="button", not a role="tab")
@@ -651,18 +670,93 @@ class ProBookScraper:
 
         The column defaults (Validation Prediction / Dispatcher Verified Data)
         are already correct — no need to change them.
+
+        If no job cards load, falls back to re-selecting the dataset and
+        rule config before retrying.
         """
         self._print_status("Navigating to Jobs / Diffs Dashboard...")
         self.page.get_by_text("Jobs / Diffs Dashboard", exact=True).first.click()
         self._wait_for_react_idle()
         self.page.wait_for_timeout(3000)
 
-        # Verify we have results
+        # Verify we have job cards
+        card_selector = 'div.border.rounded-md.p-4'
+        cards = self.page.locator(card_selector).filter(has_text="Job ID:")
+        if cards.count() > 0:
+            self._print_status(f"  Diffs loaded — {cards.count()} job cards visible.")
+            return
+
+        # No cards — try verifying evaluation results text
         try:
             results_text = self.page.get_by_text("evaluation results", exact=False).first.text_content()
             self._print_status(f"  {results_text.strip()}")
+            # Results text exists but no cards yet — wait a bit longer
+            self.page.wait_for_timeout(5000)
+            if cards.count() > 0:
+                self._print_status(f"  Diffs loaded after extra wait — {cards.count()} cards.")
+                return
         except Exception:
-            self._print_status("  WARNING: Could not find evaluation results text.")
+            pass
+
+        # Fallback: go back to Dataset Builder, re-select dataset + rule config, then retry
+        self._print_status("  No job cards found — falling back to re-select dataset & config...")
+        self._retry_diffs_navigation()
+
+    def _retry_diffs_navigation(self) -> None:
+        """Fallback: re-select the dataset and rule config, then navigate to diffs again."""
+        try:
+            # Go back to Dataset Builder tab
+            self.page.get_by_text("Dataset Builder", exact=True).first.click()
+            self._wait_for_react_idle()
+            self.page.wait_for_timeout(2000)
+
+            # Re-select the most recent dataset card (first one)
+            dataset_cards = self.page.locator('[data-slot="button"]').filter(has_text="Past Dataset")
+            if dataset_cards.count() > 0:
+                # Try to find our dataset by date range, fall back to first
+                matched = None
+                for i in range(dataset_cards.count()):
+                    card = dataset_cards.nth(i)
+                    card_text = card.text_content()
+                    if self.start_date in card_text and self.end_date in card_text:
+                        matched = card
+                        break
+                    if self._dataset_name and self._dataset_name in card_text:
+                        matched = card
+                        break
+                if matched is None:
+                    matched = dataset_cards.first
+                matched.click()
+                self.page.wait_for_timeout(1000)
+                self._print_status("  Re-selected dataset card.")
+
+            # Re-select a rule config
+            self.page.evaluate("window.scrollBy(0, 400)")
+            self.page.wait_for_timeout(500)
+            for term in ["Production", "Version 3", "Version 2", "Version 1"]:
+                config_card = self.page.locator('div.cursor-pointer').filter(has_text=term)
+                if config_card.count() > 0:
+                    config_card.first.click()
+                    self.page.wait_for_timeout(1000)
+                    self._print_status(f"  Re-selected rule config: {term}")
+                    break
+
+            # Now navigate back to Jobs / Diffs Dashboard
+            self.page.evaluate("window.scrollTo(0, 0)")
+            self.page.wait_for_timeout(300)
+            self.page.get_by_text("Jobs / Diffs Dashboard", exact=True).first.click()
+            self._wait_for_react_idle()
+            self.page.wait_for_timeout(5000)
+
+            card_selector = 'div.border.rounded-md.p-4'
+            cards = self.page.locator(card_selector).filter(has_text="Job ID:")
+            if cards.count() > 0:
+                self._print_status(f"  Diffs loaded after retry — {cards.count()} job cards.")
+            else:
+                self._print_status("  WARNING: Still no job cards after retry. Proceeding anyway.")
+
+        except Exception as e:
+            self._print_status(f"  Retry navigation failed: {e}")
 
     def scroll_and_load_all_jobs(self) -> None:
         """Scroll the page to load all job cards.
@@ -860,6 +954,263 @@ class ProBookScraper:
         self._print_status(f"Total jobs: {len(self.jobs)}, with 10+ tag: {len(relevant)}")
 
         return self.jobs
+
+    # ── Phase 6: LangSmith Trace Extraction ─────────────────────────────
+
+    LANGSMITH_URL = "https://smith.langchain.com"
+
+    def _login_langsmith(self, ls_page: Page) -> None:
+        """One-time login to LangSmith. Handles EU redirect."""
+        ls_page.goto(self.LANGSMITH_URL, wait_until="networkidle")
+        ls_page.wait_for_timeout(3000)
+
+        # Check if already logged in
+        url = ls_page.url
+        needs_login = any(x in url for x in ["sign-in", "login", "auth"])
+        # Also check if we see a login form (Continue / Forgot Password buttons)
+        if not needs_login:
+            try:
+                if ls_page.get_by_text("Continue", exact=True).first.is_visible(timeout=2000):
+                    needs_login = True
+            except Exception:
+                pass
+
+        if not needs_login:
+            self._print_status("LangSmith: already logged in.")
+            return
+
+        self._print_status("LangSmith: login required...")
+
+        try:
+            ls_username = os.getenv("LANGSMITH_USERNAME", "")
+            ls_password = os.getenv("LANGSMITH_PASSWORD", "")
+
+            if not ls_username or not ls_password:
+                raise ValueError("No LANGSMITH credentials in .env")
+
+            # Click "Log In" tab (switches from Sign Up form to Log In form)
+            try:
+                login_tab = ls_page.locator('button:has-text("Log In")').first
+                if login_tab.is_visible(timeout=3_000):
+                    login_tab.click()
+                    ls_page.wait_for_timeout(1000)
+            except Exception:
+                pass
+
+            # Email and password are on the same page — fill both, then Continue
+            email_field = ls_page.locator('input[type="email"]').first
+            email_field.wait_for(state="visible", timeout=10_000)
+            email_field.fill(ls_username)
+
+            password_field = ls_page.locator('input[type="password"]').first
+            password_field.wait_for(state="visible", timeout=5_000)
+            password_field.fill(ls_password)
+
+            # Continue button enables after both fields are filled
+            ls_page.wait_for_timeout(500)
+            submit = ls_page.locator('button[type="submit"]:has-text("Continue")').first
+            submit.click()
+            ls_page.wait_for_timeout(8000)
+
+            # Verify login succeeded
+            url = ls_page.url
+            page_text = ls_page.evaluate("() => document.body.innerText")
+            if "Your email address" not in page_text and "Continue" not in page_text[:200]:
+                self._print_status(f"LangSmith: login successful.")
+                return
+
+            self._print_status("LangSmith: still on login page after attempt.")
+
+        except Exception as e:
+            self._print_status(f"LangSmith: auto-login failed ({e})")
+
+        # Manual fallback — give 60s in non-interactive mode
+        self._pause(
+            "╔══════════════════════════════════════════════╗\n"
+            "║  Log in to LangSmith in the browser, then    ║\n"
+            "║  press ENTER here to continue...              ║\n"
+            "╚══════════════════════════════════════════════╝",
+            wait_seconds=60,
+        )
+
+    def extract_trace_reason(self, job_card_locator, ls_page: Page) -> str:
+        """Extract the hvac_system_age reason from a LangSmith trace for a job card.
+
+        1. Click the card's "Tracing" link to get the trace URL
+        2. Navigate LangSmith tab to that URL
+        3. Click validate_single_job row → combine_job_info step
+        4. Extract the hvac_system_age reason from the step output
+
+        Args:
+            job_card_locator: Playwright locator for the job card element.
+            ls_page: Reusable LangSmith page.
+
+        Returns:
+            The hvac_system_age reason string, or "" on failure.
+        """
+        try:
+            # Scroll the card into view
+            job_card_locator.scroll_into_view_if_needed()
+            self.page.wait_for_timeout(500)
+
+            # The "Tracing" link is an <a> tag with href to smith.langchain.com
+            tracing_link = job_card_locator.locator('a[href*="smith.langchain"]').first
+            trace_url = tracing_link.evaluate('el => el.href || ""')
+
+            if not trace_url:
+                self._print_status("  No tracing URL found on card.")
+                return ""
+
+            # Navigate the LangSmith tab directly to the trace URL
+            # Use domcontentloaded — LangSmith never reaches networkidle (websockets)
+            ls_page.goto(trace_url, wait_until="domcontentloaded", timeout=30_000)
+            ls_page.wait_for_timeout(5000)
+
+            # The trace URL lands on a runs list filtered by job ID tag.
+            # Click the first "validate_single_job" row to open the trace detail.
+            try:
+                run_row = ls_page.get_by_text("validate_single_job", exact=False).first
+                run_row.wait_for(state="visible", timeout=10_000)
+                run_row.click()
+                ls_page.wait_for_timeout(3000)
+            except Exception:
+                self._print_status("  Could not find validate_single_job row")
+
+            # Find and click "combine job info" step in the trace tree
+            # Try multiple name variations
+            combine_found = False
+            for name in ["combine_job_info", "combine job info", "CombineJobInfo"]:
+                try:
+                    combine_step = ls_page.get_by_text(name, exact=False).first
+                    if combine_step.is_visible(timeout=3_000):
+                        combine_step.click()
+                        ls_page.wait_for_timeout(2000)
+                        combine_found = True
+                        break
+                except Exception:
+                    continue
+            if not combine_found:
+                self._print_status("  Could not find combine job info step")
+
+            # Extract the hvac_system_age_reason value from the output panel.
+            # The combine_job_info output is plain text with key-value pairs like:
+            #   hvac_system_age_reason
+            #   No age information is provided in the transcript or summary.
+            #   hvac_system_count_reason
+            #   ...
+            reason = ls_page.evaluate("""
+                () => {
+                    const body = document.body.innerText;
+
+                    // Find exact "hvac_system_age_reason" key
+                    const key = 'hvac_system_age_reason';
+                    const idx = body.indexOf(key);
+                    if (idx === -1) return '';
+
+                    // Get text after the key (skip the key itself + any whitespace/newline)
+                    const after = body.substring(idx + key.length).trimStart();
+
+                    // The value runs until the next known key pattern (word_word_reason or word_reason)
+                    // or until a blank line / section break
+                    const endMatch = after.match(/\\n[a-z_]+_reason\\b|\\n(?:Output|Input|Metadata|Tags)\\b|\\n\\n/);
+                    const value = endMatch
+                        ? after.substring(0, endMatch.index).trim()
+                        : after.substring(0, 500).trim();
+
+                    return value;
+                }
+            """)
+
+            # Guardrails
+            reason = (reason or "").strip()[:500]
+            if len(reason) < 5:
+                reason = ""
+
+            if reason:
+                self._print_status(f"  Extracted HVAC age reason: {reason[:80]}...")
+            else:
+                self._print_status("  WARNING: Could not find hvac_system_age reason in trace.")
+
+            return reason
+
+        except Exception as e:
+            self._print_status(f"  ERROR extracting trace reason: {e}")
+            return ""
+
+    def enrich_jobs_with_trace_reasons(self, max_jobs: int = 0) -> None:
+        """For each mismatched job (AI Added 10+), extract the LangSmith trace reason.
+
+        Opens a single LangSmith tab, logs in once, then clicks each mismatched
+        card's "Tracing" link to navigate and extract the reason.
+
+        Args:
+            max_jobs: If > 0, only enrich this many jobs (useful for testing).
+                      0 means enrich all mismatched jobs.
+        """
+        mismatched = [j for j in self.jobs if j.category == "Probook placed 10+ tag that CSR/Dispatch Missed"]
+        if not mismatched:
+            self._print_status("No mismatched jobs — skipping trace extraction.")
+            return
+
+        if max_jobs > 0:
+            self._print_status(f"Enriching up to {max_jobs} of {len(mismatched)} mismatched jobs...")
+        else:
+            self._print_status(f"Enriching {len(mismatched)} mismatched jobs with LangSmith trace reasons...")
+
+        # Open a dedicated LangSmith tab and login once
+        ls_page = self._context.new_page()
+        self._login_langsmith(ls_page)
+
+        # Scroll back to top of the diffs page
+        self.page.evaluate("window.scrollTo(0, 0)")
+        self.page.wait_for_timeout(1000)
+
+        # Build a set of mismatched job IDs for quick lookup
+        mismatched_ids = {j.job_id for j in mismatched}
+
+        # Find all job cards on the page
+        card_selector = 'div.border.rounded-md.p-4'
+        all_cards = self.page.locator(card_selector).filter(has_text="Job ID:")
+        total_cards = all_cards.count()
+
+        processed = 0
+        for i in range(total_cards):
+            card = all_cards.nth(i)
+            try:
+                card_text = card.text_content()
+            except Exception:
+                continue
+
+            # Extract job ID from card text
+            id_match = re.search(r'Job ID:\s*(\d+)', card_text)
+            if not id_match:
+                continue
+
+            job_id = id_match.group(1)
+            if job_id not in mismatched_ids:
+                continue
+
+            # Find the matching JobRecord
+            job = next((j for j in mismatched if j.job_id == job_id), None)
+            if not job:
+                continue
+
+            target = max_jobs if max_jobs > 0 else len(mismatched)
+            self._print_status(f"  [{processed + 1}/{target}] Extracting trace for job {job_id}...")
+            reason = self.extract_trace_reason(card, ls_page)
+            job.hvac_system_age_reason = reason
+            processed += 1
+
+            # Stop early if we've hit the cap
+            if max_jobs > 0 and processed >= max_jobs:
+                self._print_status(f"  Reached max_jobs limit ({max_jobs}).")
+                break
+
+            # Brief pause between extractions
+            self.page.wait_for_timeout(1000)
+
+        ls_page.close()
+        self._print_status(f"Trace extraction complete. {processed}/{len(mismatched)} jobs enriched.")
 
     def save_json_backup(self, output_dir: str = ".") -> str:
         """Save raw scraped data as JSON backup."""

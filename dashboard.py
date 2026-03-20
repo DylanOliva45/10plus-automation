@@ -191,12 +191,14 @@ ORGS = [
 class PipelineRun:
     """Wraps a single pipeline execution with event streaming."""
 
-    def __init__(self, org: str, start_date: str, end_date: str):
+    def __init__(self, org: str, start_date: str, end_date: str, comparison_side: str = "dispatcher"):
         self.id = uuid.uuid4().hex[:8]
         self.org = org
         self.start_date = start_date
         self.end_date = end_date
+        self.comparison_side = comparison_side
         self.status = "pending"
+        self.pipeline_type = "10plus"
         self.events: Queue = Queue()
         self.result: dict | None = None
 
@@ -254,6 +256,10 @@ class PipelineRun:
             scraper.scroll_and_load_all_jobs()
             jobs = scraper.scrape_all_jobs()
 
+            # Phase 6: Trace enrichment
+            self._log("Enriching jobs with LangSmith trace reasons...")
+            scraper.enrich_jobs_with_trace_reasons(max_jobs=0)
+
             # JSON backup
             json_path = scraper.save_json_backup(output_dir=str(output_dir))
             self._log(f"JSON backup: {json_path}")
@@ -273,10 +279,12 @@ class PipelineRun:
 
             # Compute summary
             relevant = [j for j in jobs if j.ai_has_10plus or j.disp_has_10plus]
-            missed = sum(1 for j in relevant if j.ten_plus_status == "AI Missed 10+")
-            added = sum(1 for j in relevant if j.ten_plus_status == "AI Added 10+")
-            added_unknown = sum(1 for j in relevant if j.ten_plus_status == "AI Added 10+" and j.unknown_age)
-            matched = sum(1 for j in relevant if j.ten_plus_status == "Match")
+            missed = sum(1 for j in relevant if j.category == "Dispatcher placed 10+ tag that Probook Missed")
+            added = sum(1 for j in relevant if j.category == "Probook placed 10+ tag that CSR/Dispatch Missed")
+            job_type_mm = sum(1 for j in relevant if j.category == "10+ Job Type Mismatch")
+            tag_mm = sum(1 for j in relevant if j.category == "10+ Tag Mismatch")
+            priority_mm = sum(1 for j in relevant if j.category == "10+ Priority Mismatch")
+            matched = sum(1 for j in relevant if j.category == "Match")
 
             self.result = {
                 "sheet_url": sheet_url,
@@ -286,7 +294,9 @@ class PipelineRun:
                 "relevant_jobs": len(relevant),
                 "missed": missed,
                 "added": added,
-                "added_unknown": added_unknown,
+                "job_type_mismatch": job_type_mm,
+                "tag_mismatch": tag_mm,
+                "priority_mismatch": priority_mm,
                 "matched": matched,
             }
 
@@ -318,11 +328,12 @@ class ScrapeOnlyRun:
     manually and the results are available on the Jobs/Diffs page.
     """
 
-    def __init__(self, org: str):
+    def __init__(self, org: str, comparison_side: str = "dispatcher"):
         self.id = uuid.uuid4().hex[:8]
         self.org = org
         self.start_date = ""
         self.end_date = ""
+        self.comparison_side = comparison_side
         self.status = "pending"
         self.pipeline_type = "10plus"
         self.events: Queue = Queue()
@@ -443,6 +454,10 @@ class ScrapeOnlyRun:
             scraper.scroll_and_load_all_jobs()
             jobs = scraper.scrape_all_jobs()
 
+            # Trace enrichment
+            self._log("Enriching jobs with LangSmith trace reasons...")
+            scraper.enrich_jobs_with_trace_reasons(max_jobs=0)
+
             # JSON backup
             json_path = scraper.save_json_backup(output_dir=str(output_dir))
             self._log(f"JSON backup: {json_path}")
@@ -462,10 +477,12 @@ class ScrapeOnlyRun:
 
             # Compute summary
             relevant = [j for j in jobs if j.ai_has_10plus or j.disp_has_10plus]
-            missed = sum(1 for j in relevant if j.ten_plus_status == "AI Missed 10+")
-            added = sum(1 for j in relevant if j.ten_plus_status == "AI Added 10+")
-            added_unknown = sum(1 for j in relevant if j.ten_plus_status == "AI Added 10+" and j.unknown_age)
-            matched = sum(1 for j in relevant if j.ten_plus_status == "Match")
+            missed = sum(1 for j in relevant if j.category == "Dispatcher placed 10+ tag that Probook Missed")
+            added = sum(1 for j in relevant if j.category == "Probook placed 10+ tag that CSR/Dispatch Missed")
+            job_type_mm = sum(1 for j in relevant if j.category == "10+ Job Type Mismatch")
+            tag_mm = sum(1 for j in relevant if j.category == "10+ Tag Mismatch")
+            priority_mm = sum(1 for j in relevant if j.category == "10+ Priority Mismatch")
+            matched = sum(1 for j in relevant if j.category == "Match")
 
             self.result = {
                 "sheet_url": sheet_url,
@@ -475,7 +492,9 @@ class ScrapeOnlyRun:
                 "relevant_jobs": len(relevant),
                 "missed": missed,
                 "added": added,
-                "added_unknown": added_unknown,
+                "job_type_mismatch": job_type_mm,
+                "tag_mismatch": tag_mm,
+                "priority_mismatch": priority_mm,
                 "matched": matched,
             }
 
@@ -826,6 +845,7 @@ async def start_run(request: Request):
     org = data.get("org", "").strip()
     start_date = data.get("start_date", "").strip()
     end_date = data.get("end_date", "").strip()
+    comparison_side = data.get("comparison_side", "dispatcher").strip()
 
     if not org or not start_date or not end_date:
         return JSONResponse({"error": "org, start_date, and end_date are required"}, status_code=400)
@@ -833,7 +853,7 @@ async def start_run(request: Request):
     if org not in ORGS:
         return JSONResponse({"error": f"Unknown org: {org}"}, status_code=400)
 
-    run = PipelineRun(org, start_date, end_date)
+    run = PipelineRun(org, start_date, end_date, comparison_side=comparison_side)
     runs[run.id] = run
 
     thread = threading.Thread(target=run.run, daemon=True)
