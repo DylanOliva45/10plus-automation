@@ -254,6 +254,8 @@ class PipelineRun:
 
             # Phase 5: Scrape
             scraper.navigate_to_diffs()
+            if self.comparison_side == "csr":
+                scraper.switch_comparison_column("csr")
             scraper.scroll_and_load_all_jobs()
             jobs = scraper.scrape_all_jobs()
 
@@ -453,6 +455,8 @@ class ScrapeOnlyRun:
                 raise
 
             # Phase 4: Scroll and scrape
+            if self.comparison_side == "csr":
+                scraper.switch_comparison_column("csr")
             scraper.scroll_and_load_all_jobs()
             jobs = scraper.scrape_all_jobs()
 

@@ -702,6 +702,81 @@ class ProBookScraper:
         self._print_status("  No job cards found — falling back to re-select dataset & config...")
         self._retry_diffs_navigation()
 
+    def switch_comparison_column(self, side: str = "dispatcher") -> None:
+        """Switch the right-side column on the diffs page.
+
+        The diffs page has two column selectors (dropdowns/buttons) above the
+        job cards grid. The left column is always "Validation Prediction" (AI).
+        The right column defaults to "Dispatcher Verified Data" but can be
+        switched to "CSR Data" or similar.
+
+        Args:
+            side: "dispatcher" (default) or "csr"
+        """
+        if side == "dispatcher":
+            self._print_status("  Comparison column: Dispatcher Verified (default)")
+            return
+
+        self._print_status("  Switching comparison column to CSR Data...")
+
+        try:
+            # Look for column selector dropdowns/buttons near the top of the diffs page.
+            # These are typically select elements, comboboxes, or buttons with text like
+            # "Dispatcher Verified Data" that open a dropdown.
+            selectors = [
+                # Try: select element containing "Dispatcher"
+                'select:has(option:text("Dispatcher"))',
+                # Try: button/div with text "Dispatcher" that acts as dropdown trigger
+                'button:has-text("Dispatcher")',
+                '[role="combobox"]:has-text("Dispatcher")',
+                # Try: any clickable element with "Dispatcher Verified"
+                ':text("Dispatcher Verified")',
+            ]
+
+            clicked = False
+            for sel in selectors:
+                try:
+                    el = self.page.locator(sel).first
+                    if el.is_visible(timeout=2000):
+                        # Check if it's a native <select>
+                        tag = el.evaluate("el => el.tagName.toLowerCase()")
+                        if tag == "select":
+                            # Native select — use select_option
+                            # Try to find an option with "CSR" in it
+                            options = el.evaluate("""
+                                el => [...el.options].map(o => ({value: o.value, text: o.textContent.trim()}))
+                            """)
+                            csr_opt = next((o for o in options if "csr" in o["text"].lower()), None)
+                            if csr_opt:
+                                el.select_option(value=csr_opt["value"])
+                                self._print_status(f"  Selected CSR option: {csr_opt['text']}")
+                                clicked = True
+                                break
+                        else:
+                            # Custom dropdown — click to open, then click CSR option
+                            el.click()
+                            self.page.wait_for_timeout(500)
+
+                            # Look for CSR option in the opened dropdown
+                            csr_option = self.page.get_by_text("CSR", exact=False).first
+                            if csr_option.is_visible(timeout=2000):
+                                csr_option.click()
+                                self._print_status("  Switched to CSR Data column.")
+                                clicked = True
+                                break
+                except Exception:
+                    continue
+
+            if not clicked:
+                self._print_status("  WARNING: Could not find column switcher for CSR. Using default (Dispatcher).")
+                self._print_status("  You may need to switch to CSR view manually on the diffs page.")
+
+            self.page.wait_for_timeout(2000)
+            self._wait_for_react_idle()
+
+        except Exception as e:
+            self._print_status(f"  WARNING: Column switch failed ({e}). Using default (Dispatcher).")
+
     def _retry_diffs_navigation(self) -> None:
         """Fallback: re-select the dataset and rule config, then navigate to diffs again."""
         try:
